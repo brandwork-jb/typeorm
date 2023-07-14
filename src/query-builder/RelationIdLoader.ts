@@ -5,6 +5,7 @@ import { ObjectLiteral } from "../common/ObjectLiteral"
 import { SelectQueryBuilder } from "./SelectQueryBuilder"
 import { DriverUtils } from "../driver/DriverUtils"
 import { QueryRunner } from "../query-runner/QueryRunner"
+import { InverseRelationPropertyMissingError } from "../error/InverseRelationPropertyMissingError"
 
 /**
  * Loads relation ids for the given entities.
@@ -581,7 +582,13 @@ export class RelationIdLoader {
         entities: ObjectLiteral[],
         relatedEntities?: ObjectLiteral[],
     ) {
-        relation = relation.inverseRelation!
+        if (!relation.inverseRelation) {
+            throw new InverseRelationPropertyMissingError(
+                relation
+            )
+        }
+
+        relation = relation.inverseRelation
 
         if (
             relation.entityMetadata.primaryColumns.length ===
@@ -607,11 +614,18 @@ export class RelationIdLoader {
                                 joinColumn.referencedColumn!.propertyPath.replace(
                                     ".",
                                     "_",
+                                );
+
+                            if (!relation.inverseRelation) {
+                                throw new InverseRelationPropertyMissingError(
+                                    relation
                                 )
+                            }
+
                             const primaryColumnName =
                                 joinColumn.entityMetadata.name +
                                 "_" +
-                                relation.inverseRelation!.propertyPath.replace(
+                                relation.inverseRelation.propertyPath.replace(
                                     ".",
                                     "_",
                                 ) +
@@ -631,12 +645,18 @@ export class RelationIdLoader {
         // select all columns we need
         const qb = this.connection.createQueryBuilder(this.queryRunner)
         relation.entityMetadata.primaryColumns.forEach((primaryColumn) => {
+            if (!relation.inverseRelation) {
+                throw new InverseRelationPropertyMissingError(
+                    relation
+                )
+            }
+
             const columnName = DriverUtils.buildAlias(
                 this.connection.driver,
                 undefined,
                 primaryColumn.entityMetadata.name +
                     "_" +
-                    relation.inverseRelation!.propertyPath.replace(".", "_") +
+                    relation.inverseRelation.propertyPath.replace(".", "_") +
                     "_" +
                     primaryColumn.propertyPath.replace(".", "_"),
             )
